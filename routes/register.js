@@ -44,6 +44,14 @@ const generateRegistrationID = () => {
 // Function to generate membership ID card PDF using pdf-lib
 async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
   try {
+    // Check if logo files exist
+    if (!fs.existsSync(collegeLogoPath)) {
+      throw new Error(`College logo not found at: ${collegeLogoPath}`);
+    }
+    if (!fs.existsSync(clubLogoPath)) {
+      throw new Error(`Club logo not found at: ${clubLogoPath}`);
+    }
+
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([400, 550]);
 
@@ -240,16 +248,52 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
 
 // POST route for form submission
 router.post("/", async (req, res) => {
+  let pdfPath = null;
   try {
     const { name, mobile, email, department, interests, expectations } = req.body;
-    if (!name || !mobile || !email || !department || interests.length === 0) {
-      return res.status(400).json({ error: "All fields are required" });
+    
+    // More specific validation messages
+    if (!name) return res.status(400).json({ error: "Name is required" });
+    if (!mobile) return res.status(400).json({ error: "Mobile number is required" });
+    if (!email) return res.status(400).json({ error: "Email is required" });
+    if (!department) return res.status(400).json({ error: "Department is required" });
+    if (!interests || interests.length === 0) {
+      return res.status(400).json({ error: "Please select at least one interest" });
     }
 
-    // Check if the email already exists
-    const existingUser = await Registration.findOne({ email });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address" });
+    }
+
+    // Validate mobile number (assuming Indian format)
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobile)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit mobile number" });
+    }
+
+    // Check if the email or mobile already exists
+    const existingUser = await Registration.findOne({ 
+      $or: [
+        { email: email.toLowerCase() }, 
+        { mobile: mobile }
+      ]
+    });
+
     if (existingUser) {
-      return res.status(400).json({ error: "Email already registered" });
+      if (existingUser.email.toLowerCase() === email.toLowerCase()) {
+        return res.status(400).json({ 
+          error: "This email is already registered! If you need help, please contact us at pingus@cloudcommunityclub.in",
+          registrationID: existingUser.registrationID 
+        });
+      }
+      if (existingUser.mobile === mobile) {
+        return res.status(400).json({ 
+          error: "This mobile number is already registered! If you need help, please contact us at pingus@cloudcommunityclub.in",
+          registrationID: existingUser.registrationID 
+        });
+      }
     }
 
     // Generate a unique registration ID
@@ -268,7 +312,11 @@ router.post("/", async (req, res) => {
     await newRegistration.save();
 
     // Generate ID card PDF
-    const pdfPath = await generateIDCard(newRegistration, "images/sreenidhi-logo.png", "images/ccc_logo.png");
+    pdfPath = await generateIDCard(
+      newRegistration,
+      path.join(__dirname, "../public/images/sreenidhi-logo.png"),
+      path.join(__dirname, "../public/images/ccc_logo.png")
+    );
 
     // Send Welcome Email with PDF attachment
     const mailOptions = {
@@ -378,15 +426,45 @@ router.post("/", async (req, res) => {
       ],
     };
 
-    await transporter.sendMail(mailOptions);
+    // Add timeout to email sending
+    const sendMailPromise = new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(info);
+        }
+      });
+    });
+
+    try {
+      await Promise.race([
+        sendMailPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email sending timed out')), 30000)
+        )
+      ]);
+    } catch (error) {
+      throw new Error(`Failed to send email: ${error.message}`);
+    }
 
     // Delete temporary PDF file
-    await unlinkAsync(pdfPath);
+    if (pdfPath) {
+      await unlinkAsync(pdfPath);
+    }
 
     res.status(201).json({ message: "success" });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ error: "Server error" });
+    // Clean up PDF file if it was created
+    if (pdfPath && fs.existsSync(pdfPath)) {
+      try {
+        await unlinkAsync(pdfPath);
+      } catch (cleanupError) {
+        console.error("Error cleaning up PDF:", cleanupError);
+      }
+    }
+    res.status(500).json({ error: error.message || "Server error" });
   }
 });
 
