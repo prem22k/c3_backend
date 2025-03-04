@@ -55,43 +55,21 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     // Define colors
     const black = rgb(0, 0, 0);
     const white = rgb(1, 1, 1);
-    const darkBlue = rgb(0.1, 0.1, 0.4);
+    const darkBlue = rgb(0.05, 0.05, 0.2); // Darker blue
     const lightGray = rgb(0.95, 0.95, 0.95);
+    
+    // Gradient colors for header (from darker to lighter)
+    const headerGradient = [
+      rgb(0.05, 0.05, 0.2),
+      rgb(0.1, 0.1, 0.25),
+      rgb(0.15, 0.15, 0.3),
+    ];
 
     // Load logos
     const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
     const clubLogoBytes = fs.readFileSync(clubLogoPath);
     const collegeLogo = await pdfDoc.embedPng(collegeLogoBytes);
     const clubLogo = await pdfDoc.embedPng(clubLogoBytes);
-
-    // Draw main background
-    page.drawRectangle({
-      x: 20,
-      y: 20,
-      width: 360,
-      height: 510,
-      color: white,
-      borderColor: black,
-      borderWidth: 2,
-    });
-
-    // Draw header background (for logos)
-    page.drawRectangle({
-      x: 20,
-      y: 420,
-      width: 360,
-      height: 90,
-      color: darkBlue,
-    });
-
-    // Add light gray background for details section
-    page.drawRectangle({
-      x: 35,
-      y: 180,
-      width: 330,
-      height: 180,
-      color: lightGray,
-    });
 
     // Calculate logo dimensions while maintaining aspect ratio
     const collegeLogoAspectRatio = collegeLogo.width / collegeLogo.height;
@@ -116,77 +94,138 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       clubLogoHeight = maxLogoWidth / clubLogoAspectRatio;
     }
 
-    // Position logos at the top with proper spacing
-    const topMargin = 460;
-    const spacing = 20;
-    
-    // Center both logos
-    const totalWidth = collegeLogoWidth + spacing + clubLogoWidth;
-    const startX = (400 - totalWidth) / 2;
+    // Function to handle text overflow
+    const drawTextWithOverflow = (text, x, y, maxWidth, size, font, color) => {
+      const characters = text.split('');
+      let currentText = '';
+      let currentWidth = 0;
+      
+      for (const char of characters) {
+        const charWidth = font.widthOfTextAtSize(char, size);
+        if (currentWidth + charWidth > maxWidth) {
+          currentText += '...';
+          break;
+        }
+        currentText += char;
+        currentWidth += charWidth;
+      }
+      
+      page.drawText(currentText, {
+        x,
+        y,
+        size,
+        font,
+        color,
+      });
+    };
 
-    // Draw logos
+    // Draw main background
+    page.drawRectangle({
+      x: 20,
+      y: 20,
+      width: 360,
+      height: 510,
+      color: white,
+      borderColor: black,
+      borderWidth: 2,
+    });
+
+    // Draw gradient header background
+    const headerHeight = 100;
+    const stripeHeight = headerHeight / headerGradient.length;
+    
+    headerGradient.forEach((color, index) => {
+      page.drawRectangle({
+        x: 20,
+        y: 510 - headerHeight + (index * stripeHeight),
+        width: 360,
+        height: stripeHeight + 1,
+        color: color,
+      });
+    });
+
+    // Draw logos with adjusted positioning
     page.drawImage(collegeLogo, {
-      x: startX,
-      y: topMargin,
+      x: 40,  // Adjusted position
+      y: 440,
       width: collegeLogoWidth,
       height: collegeLogoHeight,
     });
 
     page.drawImage(clubLogo, {
-      x: startX + collegeLogoWidth + spacing,
-      y: topMargin,
+      x: 280, // Adjusted position
+      y: 440,
       width: clubLogoWidth,
       height: clubLogoHeight,
     });
 
-    // Try Unicode superscript first
+    // Draw title with proper spacing
     try {
-      page.drawText("Cloud Community Club (C³)", {
-        x: 100,
-        y: topMargin - 80,
+      const titleText = "Cloud Community Club (C³)";
+      const titleX = (400 - boldFont.widthOfTextAtSize(titleText, 24)) / 2; // Center text
+      
+      page.drawText(titleText, {
+        x: titleX,
+        y: 350, // Adjusted position
         size: 24,
         font: boldFont,
         color: black,
       });
     } catch (error) {
-      // Fallback to manual superscript if Unicode fails
-      page.drawText("Cloud Community Club (C", {
-        x: 100,
-        y: topMargin - 80,
+      // Fallback for superscript
+      const baseText = "Cloud Community Club (C";
+      const baseX = (400 - boldFont.widthOfTextAtSize(baseText + ")", 24)) / 2;
+      
+      page.drawText(baseText, {
+        x: baseX,
+        y: 350,
         size: 24,
         font: boldFont,
         color: black,
       });
 
       page.drawText("3", {
-        x: 315, // Adjust based on text width
-        y: topMargin - 70, // Slightly higher for superscript effect
-        size: 14, // Smaller size for superscript
+        x: baseX + boldFont.widthOfTextAtSize(baseText, 24),
+        y: 360,
+        size: 14,
         font: boldFont,
         color: black,
       });
 
       page.drawText(")", {
-        x: 322, // Position after the superscript
-        y: topMargin - 80,
+        x: baseX + boldFont.widthOfTextAtSize(baseText, 24) + 8,
+        y: 350,
         size: 24,
         font: boldFont,
         color: black,
       });
     }
 
-    page.drawText("Open Session Ticket", {
-      x: 120,
-      y: 380,
+    // Draw subtitle centered
+    const subtitleText = "Open Session Ticket";
+    const subtitleX = (400 - boldFont.widthOfTextAtSize(subtitleText, 18)) / 2;
+    
+    page.drawText(subtitleText, {
+      x: subtitleX,
+      y: 320,
       size: 18,
       font: boldFont,
       color: black,
     });
 
-    // Add user details with improved styling
-    const startY = topMargin - 160; // Adjusted starting position
-    const lineSpacing = 30;
+    // Add details section with overflow handling
+    const startY = 280;
+    const lineSpacing = 35;
     let yPos = startY;
+
+    // Draw light background for details
+    page.drawRectangle({
+      x: 35,
+      y: 100,
+      width: 330,
+      height: 200,
+      color: lightGray,
+    });
 
     const details = [
       { label: "Name", value: userData.name },
@@ -204,13 +243,18 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
         font: boldFont,
         color: black,
       });
-      page.drawText(value, {
-        x: 170,
-        y: yPos,
-        size: 12,
+
+      // Handle overflow for values
+      drawTextWithOverflow(
+        value,
+        170,
+        yPos,
+        200, // Maximum width for value text
+        12,
         font,
-        color: black,
-      });
+        black
+      );
+
       yPos -= lineSpacing;
     });
 
