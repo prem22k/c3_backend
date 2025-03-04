@@ -44,18 +44,34 @@ const generateRegistrationID = () => {
 // Function to generate membership ID card PDF using pdf-lib
 async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
   try {
+    // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([400, 550]);
+
+    // Embed font
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     // Define colors
     const black = rgb(0, 0, 0);
-    const darkGray = rgb(0.3, 0.3, 0.3);
-    const lightBlue = rgb(0.95, 0.98, 1);
+    const darkGray = rgb(0.2, 0.2, 0.2);
     const white = rgb(1, 1, 1);
+    
+    // Gradient colors (from dark to light)
+    const gradientColors = [
+      rgb(0.1, 0.1, 0.2),  // Dark navy
+      rgb(0.15, 0.15, 0.25),
+      rgb(0.2, 0.2, 0.3),
+      rgb(0.25, 0.25, 0.35)
+    ];
 
-    // Background
+    // Load logos
+    const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
+    const clubLogoBytes = fs.readFileSync(clubLogoPath);
+    const collegeLogo = await pdfDoc.embedPng(collegeLogoBytes);
+    const clubLogo = await pdfDoc.embedPng(clubLogoBytes);
+
+    // Draw main background
     page.drawRectangle({
       x: 20,
       y: 20,
@@ -63,42 +79,59 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       height: 510,
       color: white,
       borderColor: black,
+      borderWidth: 2,
+    });
+
+    // Create gradient effect for header
+    const headerHeight = 99;
+    const stripeHeight = headerHeight / gradientColors.length;
+    
+    gradientColors.forEach((color, index) => {
+      page.drawRectangle({
+        x: 21,
+        y: 430 - (index * stripeHeight),
+        width: 358,
+        height: stripeHeight + 1, // Add 1 to prevent gap between stripes
+        color: color,
+      });
+    });
+
+    // Add decorative accent lines
+    page.drawLine({
+      start: { x: 40, y: 410 },
+      end: { x: 360, y: 410 },
+      thickness: 2,
+      color: gradientColors[0],
+    });
+
+    page.drawLine({
+      start: { x: 40, y: 408 },
+      end: { x: 360, y: 408 },
+      thickness: 1,
+      opacity: 0.5,
+      color: gradientColors[1],
+    });
+
+    // Add subtle background for content area
+    page.drawRectangle({
+      x: 35,
+      y: 50,
+      width: 330,
+      height: 340,
+      color: rgb(0.98, 0.98, 0.98),
+      borderColor: rgb(0.9, 0.9, 0.9),
       borderWidth: 1,
+      opacity: 0.5,
     });
 
-    // Modern header design
-    page.drawRectangle({
-      x: 20,
-      y: 430,
-      width: 360,
-      height: 100,
-      color: black,
-    });
-
-    // Accent line
-    page.drawRectangle({
-      x: 20,
-      y: 420,
-      width: 360,
-      height: 10,
-      color: lightBlue,
-    });
-
-    // Logo positioning
-    const maxLogoHeight = 70;
-    const maxLogoWidth = 140;
-    const topMargin = 460;
-    const spacing = 40;
-
-    // Load and draw logos
-    const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
-    const clubLogoBytes = fs.readFileSync(clubLogoPath);
-    const collegeLogo = await pdfDoc.embedPng(collegeLogoBytes);
-    const clubLogo = await pdfDoc.embedPng(clubLogoBytes);
-
+    // Calculate logo dimensions while maintaining aspect ratio
     const collegeLogoAspectRatio = collegeLogo.width / collegeLogo.height;
     const clubLogoAspectRatio = clubLogo.width / clubLogo.height;
+    
+    const maxLogoHeight = 60;
+    const maxLogoWidth = 150;
 
+    // Calculate dimensions for college logo
     let collegeLogoWidth = maxLogoHeight * collegeLogoAspectRatio;
     let collegeLogoHeight = maxLogoHeight;
     if (collegeLogoWidth > maxLogoWidth) {
@@ -106,6 +139,7 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       collegeLogoHeight = maxLogoWidth / collegeLogoAspectRatio;
     }
 
+    // Calculate dimensions for club logo
     let clubLogoWidth = maxLogoHeight * clubLogoAspectRatio;
     let clubLogoHeight = maxLogoHeight;
     if (clubLogoWidth > maxLogoWidth) {
@@ -113,9 +147,15 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       clubLogoHeight = maxLogoWidth / clubLogoAspectRatio;
     }
 
+    // Position logos at the top with proper spacing
+    const topMargin = 460;
+    const spacing = 20;
+    
+    // Center both logos
     const totalWidth = collegeLogoWidth + spacing + clubLogoWidth;
     const startX = (400 - totalWidth) / 2;
 
+    // Draw logos
     page.drawImage(collegeLogo, {
       x: startX,
       y: topMargin,
@@ -130,26 +170,26 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       height: clubLogoHeight,
     });
 
-    // Modern title design
+    // Update text styling for more professional look
     page.drawText("Cloud Community Club (C3)", {
-      x: 70,
-      y: topMargin - 70,
-      size: 22,
+      x: 100,
+      y: topMargin - 60,
+      size: 20,
       font: boldFont,
-      color: black,
+      color: gradientColors[0],
     });
 
     page.drawText("Open Session Ticket", {
-      x: 120,
-      y: topMargin - 100,
-      size: 18,
+      x: 140,
+      y: topMargin - 90,
+      size: 16,
       font: boldFont,
-      color: darkGray,
+      color: gradientColors[1],
     });
 
-    // Details section with modern styling
-    const startY = topMargin - 150;
-    const lineSpacing = 50;
+    // Add user details
+    const startY = topMargin - 140;
+    const lineSpacing = 30;
     let yPos = startY;
 
     const details = [
@@ -160,37 +200,36 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       { label: "Venue", value: "Admin Seminar Hall 2" },
     ];
 
-    details.forEach(({ label, value }, index) => {
-      // Modern detail box with alternating background
+    // Update details styling
+    details.forEach(({ label, value }) => {
+      // Draw subtle background for each detail row
       page.drawRectangle({
-        x: 35,
-        y: yPos - 15,
-        width: 330,
-        height: 35,
-        color: index % 2 === 0 ? lightBlue : white,
-        borderColor: darkGray,
-        borderWidth: 0.5,
+        x: 45,
+        y: yPos - 5,
+        width: 310,
+        height: 25,
+        color: rgb(0.97, 0.97, 0.97),
+        opacity: 0.5,
       });
 
       page.drawText(`${label}:`, {
-        x: 45,
+        x: 50,
         y: yPos,
         size: 12,
         font: boldFont,
-        color: black,
+        color: gradientColors[0],
       });
-
       page.drawText(value, {
-        x: 160,
+        x: 170,
         y: yPos,
         size: 12,
         font,
         color: darkGray,
       });
-
       yPos -= lineSpacing;
     });
 
+    // Save PDF
     const pdfBytes = await pdfDoc.save();
     const filePath = path.join(tempDir, `${userData.registrationID}.pdf`);
     await writeFileAsync(filePath, pdfBytes);
