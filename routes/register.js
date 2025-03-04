@@ -55,8 +55,7 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     // Define colors
     const black = rgb(0, 0, 0);
     const white = rgb(1, 1, 1);
-    const darkNavy = rgb(0.1, 0.1, 0.3);
-    const darkPurple = rgb(0.2, 0.2, 0.5);
+    const darkBlue = rgb(0.1, 0.1, 0.4);
     const lightGray = rgb(0.95, 0.95, 0.95);
 
     // Load logos
@@ -76,22 +75,22 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       borderWidth: 2,
     });
 
-    // Draw background for logos section
+    // Draw header background (for logos)
     page.drawRectangle({
       x: 20,
-      y: 430,
+      y: 420,
       width: 360,
-      height: 80,
-      color: darkNavy,
+      height: 90,
+      color: darkBlue,
     });
 
-    // Add header section background
+    // Add light gray background for details section
     page.drawRectangle({
       x: 35,
-      y: 390,
+      y: 180,
       width: 330,
-      height: 40,
-      color: darkPurple,
+      height: 180,
+      color: lightGray,
     });
 
     // Calculate logo dimensions while maintaining aspect ratio
@@ -140,25 +139,52 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       height: clubLogoHeight,
     });
 
-    // Update text styling with better contrast
-    page.drawText("Cloud Community Club (C3)", {
-      x: 100,
-      y: topMargin - 60,
-      size: 22,
-      font: boldFont,
-      color: white,
-    });
+    // Try Unicode superscript first
+    try {
+      page.drawText("Cloud Community Club (C³)", {
+        x: 100,
+        y: topMargin - 80,
+        size: 24,
+        font: boldFont,
+        color: black,
+      });
+    } catch (error) {
+      // Fallback to manual superscript if Unicode fails
+      page.drawText("Cloud Community Club (C", {
+        x: 100,
+        y: topMargin - 80,
+        size: 24,
+        font: boldFont,
+        color: black,
+      });
+
+      page.drawText("3", {
+        x: 315, // Adjust based on text width
+        y: topMargin - 70, // Slightly higher for superscript effect
+        size: 14, // Smaller size for superscript
+        font: boldFont,
+        color: black,
+      });
+
+      page.drawText(")", {
+        x: 322, // Position after the superscript
+        y: topMargin - 80,
+        size: 24,
+        font: boldFont,
+        color: black,
+      });
+    }
 
     page.drawText("Open Session Ticket", {
       x: 120,
-      y: 400,
-      size: 16,
+      y: 380,
+      size: 18,
       font: boldFont,
-      color: white,
+      color: black,
     });
 
     // Add user details with improved styling
-    const startY = topMargin - 140;
+    const startY = topMargin - 160; // Adjusted starting position
     const lineSpacing = 30;
     let yPos = startY;
 
@@ -171,22 +197,12 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     ];
 
     details.forEach(({ label, value }) => {
-      // Add light background for each detail row
-      page.drawRectangle({
-        x: 45,
-        y: yPos - 5,
-        width: 310,
-        height: 25,
-        color: lightGray,
-        opacity: 0.8,
-      });
-
       page.drawText(`${label}:`, {
         x: 50,
         y: yPos,
         size: 12,
         font: boldFont,
-        color: darkNavy,
+        color: black,
       });
       page.drawText(value, {
         x: 170,
