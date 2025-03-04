@@ -55,6 +55,8 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     // Define colors
     const blue = rgb(0.29, 0.53, 0.91);
     const black = rgb(0, 0, 0);
+    const white = rgb(1, 1, 1);
+    const lightBlue = rgb(0.95, 0.98, 1);
 
     // Load logos
     const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
@@ -62,42 +64,56 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     const collegeLogo = await pdfDoc.embedPng(collegeLogoBytes);
     const clubLogo = await pdfDoc.embedPng(clubLogoBytes);
 
-    // Draw background border
+    // Draw background with gradient effect
     page.drawRectangle({
       x: 20,
       y: 20,
       width: 360,
       height: 510,
-      borderColor: blue,
-      borderWidth: 2,
+      color: blue,
+    });
+
+    // Draw inner white rectangle for content
+    page.drawRectangle({
+      x: 25,
+      y: 25,
+      width: 350,
+      height: 500,
+      color: white,
+    });
+
+    // Draw header background
+    page.drawRectangle({
+      x: 25,
+      y: 425,
+      width: 350,
+      height: 100,
+      color: blue,
     });
 
     // Calculate logo dimensions while maintaining aspect ratio
-    const collegeLogoAspectRatio = collegeLogo.width / collegeLogo.height;
-    const clubLogoAspectRatio = clubLogo.width / clubLogo.height;
+    const maxLogoHeight = 70;
+    const maxLogoWidth = 140;
     
-    const maxLogoHeight = 60;
-    const maxLogoWidth = 150;
-
     // Calculate dimensions for college logo
-    let collegeLogoWidth = maxLogoHeight * collegeLogoAspectRatio;
+    let collegeLogoWidth = maxLogoHeight * (collegeLogo.width / collegeLogo.height);
     let collegeLogoHeight = maxLogoHeight;
     if (collegeLogoWidth > maxLogoWidth) {
       collegeLogoWidth = maxLogoWidth;
-      collegeLogoHeight = maxLogoWidth / collegeLogoAspectRatio;
+      collegeLogoHeight = maxLogoWidth / (collegeLogo.width / collegeLogo.height);
     }
 
     // Calculate dimensions for club logo
-    let clubLogoWidth = maxLogoHeight * clubLogoAspectRatio;
+    let clubLogoWidth = maxLogoHeight * (clubLogo.width / clubLogo.height);
     let clubLogoHeight = maxLogoHeight;
     if (clubLogoWidth > maxLogoWidth) {
       clubLogoWidth = maxLogoWidth;
-      clubLogoHeight = maxLogoWidth / clubLogoAspectRatio;
+      clubLogoHeight = maxLogoWidth / (clubLogo.width / clubLogo.height);
     }
 
     // Position logos at the top with proper spacing
-    const topMargin = 460;
-    const spacing = 20;
+    const topMargin = 440;
+    const spacing = 30;
     
     // Center both logos
     const totalWidth = collegeLogoWidth + spacing + clubLogoWidth;
@@ -118,26 +134,45 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       height: clubLogoHeight,
     });
 
-    // Add title (adjusted position)
+    // Add decorative line
+    page.drawLine({
+      start: { x: 45, y: 415 },
+      end: { x: 355, y: 415 },
+      thickness: 2,
+      color: blue,
+    });
+
+    // Add title with better positioning
     page.drawText("Cloud Community Club (C3)", {
-      x: 100,
-      y: topMargin - 60,
-      size: 18,
+      x: 85,
+      y: 380,
+      size: 20,
       font: boldFont,
       color: blue,
     });
 
-    page.drawText("Open Session Ticket", {
-      x: 140,
-      y: topMargin - 90,
-      size: 14,
-      font,
-      color: black,
+    // Add subtitle with background
+    page.drawRectangle({
+      x: 100,
+      y: 345,
+      width: 200,
+      height: 25,
+      color: lightBlue,
+      borderColor: blue,
+      borderWidth: 1,
     });
 
-    // Add user details
-    const startY = topMargin - 140;
-    const lineSpacing = 30;
+    page.drawText("Open Session Ticket", {
+      x: 130,
+      y: 352,
+      size: 16,
+      font: boldFont,
+      color: blue,
+    });
+
+    // Add user details with improved layout
+    const startY = 310;
+    const lineSpacing = 35;
     let yPos = startY;
 
     const details = [
@@ -149,21 +184,42 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     ];
 
     details.forEach(({ label, value }) => {
+      // Draw label background
+      page.drawRectangle({
+        x: 45,
+        y: yPos - 5,
+        width: 100,
+        height: 25,
+        color: lightBlue,
+        borderColor: blue,
+        borderWidth: 1,
+      });
+
+      // Draw label and value
       page.drawText(`${label}:`, {
-        x: 50,
+        x: 55,
         y: yPos,
         size: 12,
         font: boldFont,
-        color: black,
+        color: blue,
       });
       page.drawText(value, {
-        x: 170,
+        x: 155,
         y: yPos,
         size: 12,
         font,
         color: black,
       });
       yPos -= lineSpacing;
+    });
+
+    // Add footer
+    page.drawText("Valid for one-time entry only", {
+      x: 120,
+      y: 40,
+      size: 10,
+      font: boldFont,
+      color: blue,
     });
 
     // Save PDF
