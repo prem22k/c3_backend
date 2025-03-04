@@ -8,7 +8,6 @@ import { promisify } from "util";
 import path from "path";
 import { fileURLToPath } from "url";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { mkdir } from 'fs/promises';
 
 dotenv.config();
 const router = Router();
@@ -21,12 +20,6 @@ const __dirname = path.dirname(__filename);
 const tempDir = path.join(__dirname, "../temp");
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir);
-}
-
-// After creating temp directory
-const imagesDir = path.join(__dirname, "../public/images");
-if (!fs.existsSync(imagesDir)) {
-  await mkdir(imagesDir, { recursive: true });
 }
 
 const writeFileAsync = promisify(fs.writeFile);
@@ -51,96 +44,86 @@ const generateRegistrationID = () => {
 // Function to generate membership ID card PDF using pdf-lib
 async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
   try {
-    // Verify logo paths
-    if (!fs.existsSync(collegeLogoPath)) {
-      throw new Error(`College logo not found. Please contact support.`);
-    }
-    if (!fs.existsSync(clubLogoPath)) {
-      throw new Error(`Club logo not found. Please contact support.`);
-    }
-
+    // Create a new PDF document
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([400, 550]);
 
-    // Embed fonts
+    // Embed font
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // Define modern color palette
-    const black = rgb(0.12, 0.12, 0.12);
-    const white = rgb(1, 1, 1);
-    const gray = rgb(0.95, 0.95, 0.95);
-    const darkGray = rgb(0.3, 0.3, 0.3);
+    // Define colors
+    const blue = rgb(0.29, 0.53, 0.91);
+    const black = rgb(0, 0, 0);
 
-    // Load logos first
+    // Load logos
     const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
     const clubLogoBytes = fs.readFileSync(clubLogoPath);
     const collegeLogo = await pdfDoc.embedPng(collegeLogoBytes);
     const clubLogo = await pdfDoc.embedPng(clubLogoBytes);
 
-    // Draw modern background with layers
-    // Main black background
+    // Draw background border and fill
     page.drawRectangle({
       x: 20,
       y: 20,
       width: 360,
       height: 510,
-      color: black,
+      borderColor: blue,
+      borderWidth: 2,
     });
 
-    // Accent rectangle on the left
+    // Add a light blue background for the header area
     page.drawRectangle({
-      x: 20,
-      y: 20,
-      width: 10,
-      height: 510,
-      color: darkGray,
+      x: 21,
+      y: 430,
+      width: 358,
+      height: 99,
+      color: rgb(0.95, 0.97, 1), // Very light blue
+      borderColor: blue,
+      borderWidth: 1,
     });
 
-    // White content area
+    // Add a subtle gradient strip below the header
     page.drawRectangle({
-      x: 35,
-      y: 35,
-      width: 330,
-      height: 480,
-      color: white,
+      x: 21,
+      y: 420,
+      width: 358,
+      height: 10,
+      color: rgb(0.9, 0.95, 1), // Slightly darker light blue
     });
 
-    // Black header area for logos
-    page.drawRectangle({
-      x: 35,
-      y: 425,
-      width: 330,
-      height: 90,
-      color: black,
-    });
-
-    // Calculate and draw logos
-    const maxLogoHeight = 65;
-    const maxLogoWidth = 130;
+    // Calculate logo dimensions while maintaining aspect ratio
+    const collegeLogoAspectRatio = collegeLogo.width / collegeLogo.height;
+    const clubLogoAspectRatio = clubLogo.width / clubLogo.height;
     
-    // Calculate dimensions for logos
-    let collegeLogoWidth = maxLogoHeight * (collegeLogo.width / collegeLogo.height);
+    const maxLogoHeight = 60;
+    const maxLogoWidth = 150;
+
+    // Calculate dimensions for college logo
+    let collegeLogoWidth = maxLogoHeight * collegeLogoAspectRatio;
     let collegeLogoHeight = maxLogoHeight;
     if (collegeLogoWidth > maxLogoWidth) {
       collegeLogoWidth = maxLogoWidth;
-      collegeLogoHeight = maxLogoWidth / (collegeLogo.width / collegeLogo.height);
+      collegeLogoHeight = maxLogoWidth / collegeLogoAspectRatio;
     }
 
-    let clubLogoWidth = maxLogoHeight * (clubLogo.width / clubLogo.height);
+    // Calculate dimensions for club logo
+    let clubLogoWidth = maxLogoHeight * clubLogoAspectRatio;
     let clubLogoHeight = maxLogoHeight;
     if (clubLogoWidth > maxLogoWidth) {
       clubLogoWidth = maxLogoWidth;
-      clubLogoHeight = maxLogoWidth / (clubLogo.width / clubLogo.height);
+      clubLogoHeight = maxLogoWidth / clubLogoAspectRatio;
     }
 
-    // Position logos
-    const topMargin = 435;
-    const spacing = 40;
+    // Position logos at the top with proper spacing
+    const topMargin = 460;
+    const spacing = 20;
+    
+    // Center both logos
     const totalWidth = collegeLogoWidth + spacing + clubLogoWidth;
     const startX = (400 - totalWidth) / 2;
 
-    // Draw logos on black background
+    // Draw logos
     page.drawImage(collegeLogo, {
       x: startX,
       y: topMargin,
@@ -155,35 +138,26 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       height: clubLogoHeight,
     });
 
-    // Add modern title design
-    page.drawRectangle({
-      x: 55,
-      y: 375,
-      width: 290,
-      height: 40,
-      color: gray,
-    });
-
+    // Add title (adjusted position)
     page.drawText("Cloud Community Club (C3)", {
-      x: 70,
-      y: 388,
+      x: 100,
+      y: topMargin - 60,
       size: 18,
       font: boldFont,
+      color: blue,
+    });
+
+    page.drawText("Open Session Ticket", {
+      x: 140,
+      y: topMargin - 90,
+      size: 14,
+      font,
       color: black,
     });
 
-    // Ticket type with minimal design
-    page.drawText("OPEN SESSION TICKET", {
-      x: 125,
-      y: 350,
-      size: 14,
-      font: boldFont,
-      color: darkGray,
-    });
-
-    // User details with modern layout
-    const startY = 310;
-    const lineSpacing = 45;
+    // Add user details
+    const startY = topMargin - 140;
+    const lineSpacing = 30;
     let yPos = startY;
 
     const details = [
@@ -195,50 +169,21 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     ];
 
     details.forEach(({ label, value }) => {
-      // Label with minimal design
-      page.drawText(label.toUpperCase(), {
-        x: 55,
+      page.drawText(`${label}:`, {
+        x: 50,
         y: yPos,
-        size: 10,
-        font: boldFont,
-        color: darkGray,
-      });
-
-      // Value with larger, bold text
-      page.drawText(value, {
-        x: 55,
-        y: yPos - 20,
         size: 12,
         font: boldFont,
         color: black,
       });
-
-      // Subtle separator line
-      page.drawLine({
-        start: { x: 55, y: yPos - 25 },
-        end: { x: 345, y: yPos - 25 },
-        thickness: 0.5,
-        color: gray,
+      page.drawText(value, {
+        x: 170,
+        y: yPos,
+        size: 12,
+        font,
+        color: black,
       });
-
       yPos -= lineSpacing;
-    });
-
-    // Modern footer design
-    page.drawRectangle({
-      x: 35,
-      y: 35,
-      width: 330,
-      height: 30,
-      color: gray,
-    });
-
-    page.drawText("Valid for one-time entry only", {
-      x: 125,
-      y: 47,
-      size: 10,
-      font: boldFont,
-      color: darkGray,
     });
 
     // Save PDF
@@ -255,52 +200,16 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
 
 // POST route for form submission
 router.post("/", async (req, res) => {
-  let pdfPath = null;
   try {
     const { name, mobile, email, department, interests, expectations } = req.body;
-    
-    // More specific validation messages
-    if (!name) return res.status(400).json({ error: "Name is required" });
-    if (!mobile) return res.status(400).json({ error: "Mobile number is required" });
-    if (!email) return res.status(400).json({ error: "Email is required" });
-    if (!department) return res.status(400).json({ error: "Department is required" });
-    if (!interests || interests.length === 0) {
-      return res.status(400).json({ error: "Please select at least one interest" });
+    if (!name || !mobile || !email || !department || interests.length === 0) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: "Please enter a valid email address" });
-    }
-
-    // Validate mobile number (assuming Indian format)
-    const mobileRegex = /^[6-9]\d{9}$/;
-    if (!mobileRegex.test(mobile)) {
-      return res.status(400).json({ error: "Please enter a valid 10-digit mobile number" });
-    }
-
-    // Check if the email or mobile already exists
-    const existingUser = await Registration.findOne({ 
-      $or: [
-        { email: email.toLowerCase() }, 
-        { mobile: mobile }
-      ]
-    });
-
+    // Check if the email already exists
+    const existingUser = await Registration.findOne({ email });
     if (existingUser) {
-      if (existingUser.email.toLowerCase() === email.toLowerCase()) {
-        return res.status(400).json({ 
-          error: "This email is already registered! If you need help, please contact us at pingus@cloudcommunityclub.in",
-          registrationID: existingUser.registrationID 
-        });
-      }
-      if (existingUser.mobile === mobile) {
-        return res.status(400).json({ 
-          error: "This mobile number is already registered! If you need help, please contact us at pingus@cloudcommunityclub.in",
-          registrationID: existingUser.registrationID 
-        });
-      }
+      return res.status(400).json({ error: "Email already registered" });
     }
 
     // Generate a unique registration ID
@@ -318,72 +227,126 @@ router.post("/", async (req, res) => {
     });
     await newRegistration.save();
 
-    // Generate ID card PDF with better error handling
-    try {
-      pdfPath = await generateIDCard(
-        newRegistration,
-        path.join(__dirname, "../public/images/sreenidhi-logo.png"),
-        path.join(__dirname, "../public/images/ccc_logo.png")
-      );
-    } catch (pdfError) {
-      console.error("PDF Generation Error:", pdfError);
-      throw new Error("Unable to generate ticket. Please try again later.");
-    }
+    // Generate ID card PDF
+    const pdfPath = await generateIDCard(newRegistration, "images/sreenidhi-logo.png", "images/ccc_logo.png");
 
-    // Send Welcome Email with better error handling
-    try {
-      const sendMailPromise = new Promise((resolve, reject) => {
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(info);
-          }
-        });
-      });
+    // Send Welcome Email with PDF attachment
+    const mailOptions = {
+      from: `"Cloud Community Club (C3)" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "🎟️ OpenSession Ticket – Cloud Community Club C³ @ SNIST",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>OpenSession Ticket – Cloud Community Club ⁨C³ @ SNIST</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f4;
+                    margin: 0;
+                    padding: 0;
+                }
+                .container {
+                    max-width: 600px;
+                    margin: 20px auto;
+                    background: #ffffff;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+                    text-align: center;
+                    border-top: 5px solid #007bff;
+                }
+                h1 {
+                    color: #007bff;
+                    margin-bottom: 10px;
+                }
+                p {
+                    font-size: 16px;
+                    color: #333;
+                    line-height: 1.6;
+                }
+                .highlight {
+                    font-weight: bold;
+                    color: #007bff;
+                }
+                .event-details {
+                    background: #f0f8ff;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin: 15px 0;
+                }
+                .event-details p {
+                    margin: 5px 0;
+                    font-size: 18px;
+                }
+                .cta-button {
+                    display: inline-block;
+                    background: #007bff;
+                    color: #ffffff;
+                    text-decoration: none;
+                    padding: 12px 20px;
+                    border-radius: 5px;
+                    font-size: 18px;
+                    margin-top: 10px;
+                }
+                .footer {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    color: #666;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎟️ Welcome to ⁨C³!</h1>
+                <p>Hey <span class="highlight">${name}</span>,</p>
+                <p>Thank you for registering for <strong>Cloud Community Club C³ OpenSession</strong> at SNIST! 🚀</p>
 
-      await Promise.race([
-        sendMailPromise,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email sending timed out')), 30000)
-        )
-      ]);
-    } catch (emailError) {
-      console.error("Email Error:", emailError);
-      throw new Error("Registration successful but unable to send email. Please contact support.");
-    }
+                <div class="event-details">
+                    <p><strong>📍 Venue:</strong> Admin Seminar Hall - 2</p>
+                    <p><strong>📅 Date:</strong> 10th March</p>
+                    <p><strong>⏰ Time:</strong> 1:30 PM – 3:30 PM</p>
+                    <p><strong>🆔 Registration ID:</strong> <span class="highlight">${registrationID}</span></p>
+                </div>
 
-    // Cleanup and response
-    if (pdfPath && fs.existsSync(pdfPath)) {
-      try {
-        await unlinkAsync(pdfPath);
-      } catch (cleanupError) {
-        console.error("Cleanup Error:", cleanupError);
-      }
-    }
+                <p>📎 Your Ticket is attached to this email.</p>
 
-    res.status(201).json({ 
-      message: "success",
-      registrationID: registrationID 
-    });
+                <h2>🔥 What's in Store?</h2>
+                <p>✔️ <strong>Inspiring Talks</strong> – Gain insights from industry experts.</p>
+                <p>✔️ <strong>Networking</strong> – Connect with like-minded tech enthusiasts.</p>
+                <p>✔️ <strong>Hands-on Workshops</strong> – Explore cutting-edge technologies.</p>
+                <p>✔️ <strong>Opportunities</strong> – Research, Open-Source, Hackathons & More!</p>
 
+                <a href="https://chat.whatsapp.com/I0Z9iJ4O9veByzx20AofGY" class="cta-button">Join Our WhatsApp Community</a>
+
+                <p class="footer">
+                    Looking forward to an exciting session with you! 🎯 <br>
+                    <strong>Best Regards,</strong><br>
+                    <strong>Team C³</strong> <br>
+                    📧 <a href="mailto:pingus@cloudcommunityclub.in" style="color: #007bff;">pingus@cloudcommunityclub.in</a>
+                </p>
+            </div>
+        </body>
+        </html>
+      `,
+      attachments: [
+        {
+          filename: `C3_Membership_Card_${registrationID}.pdf`,
+          path: pdfPath,
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    // Delete temporary PDF file
+    await unlinkAsync(pdfPath);
+
+    res.status(201).json({ message: "success" });
   } catch (error) {
-    console.error("Main Error:", error);
-    
-    // Cleanup on error
-    if (pdfPath && fs.existsSync(pdfPath)) {
-      try {
-        await unlinkAsync(pdfPath);
-      } catch (cleanupError) {
-        console.error("Cleanup Error:", cleanupError);
-      }
-    }
-
-    // Send appropriate error message to client
-    res.status(500).json({ 
-      error: error.message || "Unable to complete registration. Please try again later.",
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error("Error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
