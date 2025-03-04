@@ -8,6 +8,7 @@ import { promisify } from "util";
 import path from "path";
 import { fileURLToPath } from "url";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { mkdir } from 'fs/promises';
 
 dotenv.config();
 const router = Router();
@@ -20,6 +21,12 @@ const __dirname = path.dirname(__filename);
 const tempDir = path.join(__dirname, "../temp");
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir);
+}
+
+// After creating temp directory
+const imagesDir = path.join(__dirname, "../public/images");
+if (!fs.existsSync(imagesDir)) {
+  await mkdir(imagesDir, { recursive: true });
 }
 
 const writeFileAsync = promisify(fs.writeFile);
@@ -44,12 +51,12 @@ const generateRegistrationID = () => {
 // Function to generate membership ID card PDF using pdf-lib
 async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
   try {
-    // Check if logo files exist
+    // Verify logo paths
     if (!fs.existsSync(collegeLogoPath)) {
-      throw new Error(`College logo not found at: ${collegeLogoPath}`);
+      throw new Error(`College logo not found. Please contact support.`);
     }
     if (!fs.existsSync(clubLogoPath)) {
-      throw new Error(`Club logo not found at: ${clubLogoPath}`);
+      throw new Error(`Club logo not found. Please contact support.`);
     }
 
     const pdfDoc = await PDFDocument.create();
@@ -311,160 +318,72 @@ router.post("/", async (req, res) => {
     });
     await newRegistration.save();
 
-    // Generate ID card PDF
-    pdfPath = await generateIDCard(
-      newRegistration,
-      path.join(__dirname, "../public/images/sreenidhi-logo.png"),
-      path.join(__dirname, "../public/images/ccc_logo.png")
-    );
-
-    // Send Welcome Email with PDF attachment
-    const mailOptions = {
-      from: `"Cloud Community Club (C3)" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "🎟️ OpenSession Ticket – Cloud Community Club C³ @ SNIST",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>OpenSession Ticket – Cloud Community Club ⁨C³ @ SNIST</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 0;
-                }
-                .container {
-                    max-width: 600px;
-                    margin: 20px auto;
-                    background: #ffffff;
-                    padding: 20px;
-                    border-radius: 10px;
-                    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-                    text-align: center;
-                    border-top: 5px solid #007bff;
-                }
-                h1 {
-                    color: #007bff;
-                    margin-bottom: 10px;
-                }
-                p {
-                    font-size: 16px;
-                    color: #333;
-                    line-height: 1.6;
-                }
-                .highlight {
-                    font-weight: bold;
-                    color: #007bff;
-                }
-                .event-details {
-                    background: #f0f8ff;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin: 15px 0;
-                }
-                .event-details p {
-                    margin: 5px 0;
-                    font-size: 18px;
-                }
-                .cta-button {
-                    display: inline-block;
-                    background: #007bff;
-                    color: #ffffff;
-                    text-decoration: none;
-                    padding: 12px 20px;
-                    border-radius: 5px;
-                    font-size: 18px;
-                    margin-top: 10px;
-                }
-                .footer {
-                    margin-top: 20px;
-                    font-size: 14px;
-                    color: #666;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🎟️ Welcome to ⁨C³!</h1>
-                <p>Hey <span class="highlight">${name}</span>,</p>
-                <p>Thank you for registering for <strong>Cloud Community Club C³ OpenSession</strong> at SNIST! 🚀</p>
-
-                <div class="event-details">
-                    <p><strong>📍 Venue:</strong> Admin Seminar Hall - 2</p>
-                    <p><strong>📅 Date:</strong> 10th March</p>
-                    <p><strong>⏰ Time:</strong> 1:30 PM – 3:30 PM</p>
-                    <p><strong>🆔 Registration ID:</strong> <span class="highlight">${registrationID}</span></p>
-                </div>
-
-                <p>📎 Your Ticket is attached to this email.</p>
-
-                <h2>🔥 What's in Store?</h2>
-                <p>✔️ <strong>Inspiring Talks</strong> – Gain insights from industry experts.</p>
-                <p>✔️ <strong>Networking</strong> – Connect with like-minded tech enthusiasts.</p>
-                <p>✔️ <strong>Hands-on Workshops</strong> – Explore cutting-edge technologies.</p>
-                <p>✔️ <strong>Opportunities</strong> – Research, Open-Source, Hackathons & More!</p>
-
-                <a href="https://chat.whatsapp.com/I0Z9iJ4O9veByzx20AofGY" class="cta-button">Join Our WhatsApp Community</a>
-
-                <p class="footer">
-                    Looking forward to an exciting session with you! 🎯 <br>
-                    <strong>Best Regards,</strong><br>
-                    <strong>Team C³</strong> <br>
-                    📧 <a href="mailto:pingus@cloudcommunityclub.in" style="color: #007bff;">pingus@cloudcommunityclub.in</a>
-                </p>
-            </div>
-        </body>
-        </html>
-      `,
-      attachments: [
-        {
-          filename: `C3_Membership_Card_${registrationID}.pdf`,
-          path: pdfPath,
-        },
-      ],
-    };
-
-    // Add timeout to email sending
-    const sendMailPromise = new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(info);
-        }
-      });
-    });
-
+    // Generate ID card PDF with better error handling
     try {
+      pdfPath = await generateIDCard(
+        newRegistration,
+        path.join(__dirname, "../public/images/sreenidhi-logo.png"),
+        path.join(__dirname, "../public/images/ccc_logo.png")
+      );
+    } catch (pdfError) {
+      console.error("PDF Generation Error:", pdfError);
+      throw new Error("Unable to generate ticket. Please try again later.");
+    }
+
+    // Send Welcome Email with better error handling
+    try {
+      const sendMailPromise = new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(info);
+          }
+        });
+      });
+
       await Promise.race([
         sendMailPromise,
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Email sending timed out')), 30000)
         )
       ]);
-    } catch (error) {
-      throw new Error(`Failed to send email: ${error.message}`);
+    } catch (emailError) {
+      console.error("Email Error:", emailError);
+      throw new Error("Registration successful but unable to send email. Please contact support.");
     }
 
-    // Delete temporary PDF file
-    if (pdfPath) {
-      await unlinkAsync(pdfPath);
-    }
-
-    res.status(201).json({ message: "success" });
-  } catch (error) {
-    console.error("Error:", error);
-    // Clean up PDF file if it was created
+    // Cleanup and response
     if (pdfPath && fs.existsSync(pdfPath)) {
       try {
         await unlinkAsync(pdfPath);
       } catch (cleanupError) {
-        console.error("Error cleaning up PDF:", cleanupError);
+        console.error("Cleanup Error:", cleanupError);
       }
     }
-    res.status(500).json({ error: error.message || "Server error" });
+
+    res.status(201).json({ 
+      message: "success",
+      registrationID: registrationID 
+    });
+
+  } catch (error) {
+    console.error("Main Error:", error);
+    
+    // Cleanup on error
+    if (pdfPath && fs.existsSync(pdfPath)) {
+      try {
+        await unlinkAsync(pdfPath);
+      } catch (cleanupError) {
+        console.error("Cleanup Error:", cleanupError);
+      }
+    }
+
+    // Send appropriate error message to client
+    res.status(500).json({ 
+      error: error.message || "Unable to complete registration. Please try again later.",
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
