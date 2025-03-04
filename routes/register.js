@@ -54,16 +54,10 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
 
     // Define colors
     const black = rgb(0, 0, 0);
-    const darkGray = rgb(0.2, 0.2, 0.2);
     const white = rgb(1, 1, 1);
-    
-    // Gradient colors (from dark to light)
-    const gradientColors = [
-      rgb(0.1, 0.1, 0.2),  // Dark navy
-      rgb(0.15, 0.15, 0.25),
-      rgb(0.2, 0.2, 0.3),
-      rgb(0.25, 0.25, 0.35)
-    ];
+    const darkNavy = rgb(0.1, 0.1, 0.3);
+    const darkPurple = rgb(0.2, 0.2, 0.5);
+    const lightGray = rgb(0.95, 0.95, 0.95);
 
     // Load logos
     const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
@@ -82,46 +76,22 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       borderWidth: 2,
     });
 
-    // Create gradient effect for header
-    const headerHeight = 99;
-    const stripeHeight = headerHeight / gradientColors.length;
-    
-    gradientColors.forEach((color, index) => {
-      page.drawRectangle({
-        x: 21,
-        y: 430 - (index * stripeHeight),
-        width: 358,
-        height: stripeHeight + 1, // Add 1 to prevent gap between stripes
-        color: color,
-      });
+    // Draw background for logos section
+    page.drawRectangle({
+      x: 20,
+      y: 430,
+      width: 360,
+      height: 80,
+      color: darkNavy,
     });
 
-    // Add decorative accent lines
-    page.drawLine({
-      start: { x: 40, y: 410 },
-      end: { x: 360, y: 410 },
-      thickness: 2,
-      color: gradientColors[0],
-    });
-
-    page.drawLine({
-      start: { x: 40, y: 408 },
-      end: { x: 360, y: 408 },
-      thickness: 1,
-      opacity: 0.5,
-      color: gradientColors[1],
-    });
-
-    // Add subtle background for content area
+    // Add header section background
     page.drawRectangle({
       x: 35,
-      y: 50,
+      y: 390,
       width: 330,
-      height: 340,
-      color: rgb(0.98, 0.98, 0.98),
-      borderColor: rgb(0.9, 0.9, 0.9),
-      borderWidth: 1,
-      opacity: 0.5,
+      height: 40,
+      color: darkPurple,
     });
 
     // Calculate logo dimensions while maintaining aspect ratio
@@ -170,24 +140,24 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       height: clubLogoHeight,
     });
 
-    // Update text styling for more professional look
+    // Update text styling with better contrast
     page.drawText("Cloud Community Club (C3)", {
       x: 100,
       y: topMargin - 60,
-      size: 20,
+      size: 22,
       font: boldFont,
-      color: gradientColors[0],
+      color: white,
     });
 
     page.drawText("Open Session Ticket", {
-      x: 140,
-      y: topMargin - 90,
+      x: 120,
+      y: 400,
       size: 16,
       font: boldFont,
-      color: gradientColors[1],
+      color: white,
     });
 
-    // Add user details
+    // Add user details with improved styling
     const startY = topMargin - 140;
     const lineSpacing = 30;
     let yPos = startY;
@@ -200,16 +170,15 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       { label: "Venue", value: "Admin Seminar Hall 2" },
     ];
 
-    // Update details styling
     details.forEach(({ label, value }) => {
-      // Draw subtle background for each detail row
+      // Add light background for each detail row
       page.drawRectangle({
         x: 45,
         y: yPos - 5,
         width: 310,
         height: 25,
-        color: rgb(0.97, 0.97, 0.97),
-        opacity: 0.5,
+        color: lightGray,
+        opacity: 0.8,
       });
 
       page.drawText(`${label}:`, {
@@ -217,14 +186,14 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
         y: yPos,
         size: 12,
         font: boldFont,
-        color: gradientColors[0],
+        color: darkNavy,
       });
       page.drawText(value, {
         x: 170,
         y: yPos,
         size: 12,
         font,
-        color: darkGray,
+        color: black,
       });
       yPos -= lineSpacing;
     });
