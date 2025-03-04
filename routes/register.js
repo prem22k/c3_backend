@@ -57,6 +57,12 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     const gray = rgb(0.95, 0.95, 0.95);
     const darkGray = rgb(0.3, 0.3, 0.3);
 
+    // Load logos first
+    const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
+    const clubLogoBytes = fs.readFileSync(clubLogoPath);
+    const collegeLogo = await pdfDoc.embedPng(collegeLogoBytes);
+    const clubLogo = await pdfDoc.embedPng(clubLogoBytes);
+
     // Draw modern background with layers
     // Main black background
     page.drawRectangle({
