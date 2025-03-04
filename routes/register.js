@@ -55,7 +55,6 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
     // Define colors
     const blue = rgb(0.29, 0.53, 0.91);
     const black = rgb(0, 0, 0);
-    const gray = rgb(0.8, 0.8, 0.8);
 
     // Load logos
     const collegeLogoBytes = fs.readFileSync(collegeLogoPath);
@@ -73,29 +72,56 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
       borderWidth: 2,
     });
 
-    // Add logos with adjusted positioning
-    const logoWidth = 100;
-    const logoHeight = 100;
+    // Calculate logo dimensions while maintaining aspect ratio
+    const collegeLogoAspectRatio = collegeLogo.width / collegeLogo.height;
+    const clubLogoAspectRatio = clubLogo.width / clubLogo.height;
     
-    // Center both logos at the top
+    const maxLogoHeight = 60;
+    const maxLogoWidth = 150;
+
+    // Calculate dimensions for college logo
+    let collegeLogoWidth = maxLogoHeight * collegeLogoAspectRatio;
+    let collegeLogoHeight = maxLogoHeight;
+    if (collegeLogoWidth > maxLogoWidth) {
+      collegeLogoWidth = maxLogoWidth;
+      collegeLogoHeight = maxLogoWidth / collegeLogoAspectRatio;
+    }
+
+    // Calculate dimensions for club logo
+    let clubLogoWidth = maxLogoHeight * clubLogoAspectRatio;
+    let clubLogoHeight = maxLogoHeight;
+    if (clubLogoWidth > maxLogoWidth) {
+      clubLogoWidth = maxLogoWidth;
+      clubLogoHeight = maxLogoWidth / clubLogoAspectRatio;
+    }
+
+    // Position logos at the top with proper spacing
+    const topMargin = 460;
+    const spacing = 20;
+    
+    // Center both logos
+    const totalWidth = collegeLogoWidth + spacing + clubLogoWidth;
+    const startX = (400 - totalWidth) / 2;
+
+    // Draw logos
     page.drawImage(collegeLogo, {
-      x: 60,
-      y: 430,
-      width: logoWidth,
-      height: logoHeight,
+      x: startX,
+      y: topMargin,
+      width: collegeLogoWidth,
+      height: collegeLogoHeight,
     });
 
     page.drawImage(clubLogo, {
-      x: 240,
-      y: 430,
-      width: logoWidth,
-      height: logoHeight,
+      x: startX + collegeLogoWidth + spacing,
+      y: topMargin,
+      width: clubLogoWidth,
+      height: clubLogoHeight,
     });
 
-    // Add title (moved down)
+    // Add title (adjusted position)
     page.drawText("Cloud Community Club (C3)", {
       x: 100,
-      y: 380,
+      y: topMargin - 60,
       size: 18,
       font: boldFont,
       color: blue,
@@ -103,28 +129,40 @@ async function generateIDCard(userData, collegeLogoPath, clubLogoPath) {
 
     page.drawText("Open Session Ticket", {
       x: 140,
-      y: 350,
+      y: topMargin - 90,
       size: 14,
       font,
       color: black,
     });
 
     // Add user details
-    const startX = 50;
-    let yPos = 300;
+    const startY = topMargin - 140;
     const lineSpacing = 30;
+    let yPos = startY;
 
     const details = [
       { label: "Name", value: userData.name },
       { label: "Registration ID", value: userData.registrationID },
       { label: "Email", value: userData.email },
       { label: "Date", value: "10 March 2025" },
-      { label: "Venue", value: "Admin Seminar Hall 1" },
+      { label: "Venue", value: "Admin Seminar Hall 2" },
     ];
 
     details.forEach(({ label, value }) => {
-      page.drawText(`${label}:`, { x: startX, y: yPos, size: 12, font: boldFont, color: black });
-      page.drawText(value, { x: startX + 120, y: yPos, size: 12, font, color: black });
+      page.drawText(`${label}:`, {
+        x: 50,
+        y: yPos,
+        size: 12,
+        font: boldFont,
+        color: black,
+      });
+      page.drawText(value, {
+        x: 170,
+        y: yPos,
+        size: 12,
+        font,
+        color: black,
+      });
       yPos -= lineSpacing;
     });
 
@@ -176,25 +214,101 @@ router.post("/", async (req, res) => {
     const mailOptions = {
       from: `"Cloud Community Club (C3)" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "🎉 Welcome to Cloud Community Club (C3)!",
+      subject: "🎟️ OpenSession Ticket – Cloud Community Club C³ @ SNIST",
       html: `
-        <p>Hey <strong>${name}</strong>,</p>
-        <p>Welcome to the <strong>Cloud Community Club (C3)</strong> – where innovation meets community! 🌍✨</p>
-        
-        <h3>🆔 Your Registration Details:</h3>
-        <p><strong>✔ Name:</strong> ${name}</p>
-        <p><strong>✔ Registration ID:</strong> ${registrationID}</p>
-        <p>📎 <strong>Attached:</strong> Your official C3 Membership ID Card 🎉</p>
-        
-        <h3>💬 Join Our Community!</h3>
-        <p>Connect with fellow members and stay updated:</p>
-        <p>👉 <a href="https://chat.whatsapp.com/I0Z9iJ4O9veByzx20AofGY">Join our WhatsApp Community</a></p>
-        
-        <p>Looking forward to seeing you at the session!</p>
-        
-        <p>Best regards,<br>
-        <strong>Team C3</strong></p>
-        <p>📧 <a href="mailto:pingus@cloudcommunityclub.in">pingus@cloudcommunityclub.in</a></p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>OpenSession Ticket – Cloud Community Club ⁨C³ @ SNIST</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f4;
+                    margin: 0;
+                    padding: 0;
+                }
+                .container {
+                    max-width: 600px;
+                    margin: 20px auto;
+                    background: #ffffff;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+                    text-align: center;
+                    border-top: 5px solid #007bff;
+                }
+                h1 {
+                    color: #007bff;
+                    margin-bottom: 10px;
+                }
+                p {
+                    font-size: 16px;
+                    color: #333;
+                    line-height: 1.6;
+                }
+                .highlight {
+                    font-weight: bold;
+                    color: #007bff;
+                }
+                .event-details {
+                    background: #f0f8ff;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin: 15px 0;
+                }
+                .event-details p {
+                    margin: 5px 0;
+                    font-size: 18px;
+                }
+                .cta-button {
+                    display: inline-block;
+                    background: #007bff;
+                    color: #ffffff;
+                    text-decoration: none;
+                    padding: 12px 20px;
+                    border-radius: 5px;
+                    font-size: 18px;
+                    margin-top: 10px;
+                }
+                .footer {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    color: #666;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎟️ Welcome to ⁨C³!</h1>
+                <p>Hey <span class="highlight">${name}</span>,</p>
+                <p>Thank you for registering for <strong>Cloud Community Club C³ OpenSession</strong> at SNIST! 🚀</p>
+
+                <div class="event-details">
+                    <p><strong>📍 Venue:</strong> Admin Seminar Hall - 2</p>
+                    <p><strong>📅 Date:</strong> 10th March</p>
+                    <p><strong>⏰ Time:</strong> 1:30 PM – 3:30 PM</p>
+                    <p><strong>🆔 Registration ID:</strong> <span class="highlight">${registrationID}</span></p>
+                </div>
+
+                <p>📎 Your Ticket is attached to this email.</p>
+
+                <h2>🔥 What's in Store?</h2>
+                <p>✔️ <strong>Inspiring Talks</strong> – Gain insights from industry experts.</p>
+                <p>✔️ <strong>Networking</strong> – Connect with like-minded tech enthusiasts.</p>
+                <p>✔️ <strong>Hands-on Workshops</strong> – Explore cutting-edge technologies.</p>
+                <p>✔️ <strong>Opportunities</strong> – Research, Open-Source, Hackathons & More!</p>
+
+                <a href="https://chat.whatsapp.com/I0Z9iJ4O9veByzx20AofGY" class="cta-button">Join Our WhatsApp Community</a>
+
+                <p class="footer">
+                    Looking forward to an exciting session with you! 🎯 <br>
+                    <strong>Best Regards,</strong><br>
+                    <strong>Team C³</strong> <br>
+                    📧 <a href="mailto:pingus@cloudcommunityclub.in" style="color: #007bff;">pingus@cloudcommunityclub.in</a>
+                </p>
+            </div>
+        </body>
+        </html>
       `,
       attachments: [
         {
