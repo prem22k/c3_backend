@@ -306,7 +306,7 @@ router.post("/", async (req, res) => {
     const mailOptions = {
       from: `"Cloud Community Club (C3)" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "🎟️ OpenSession Ticket – Cloud Community Club C³ @ SNIST",
+      subject: "OpenSession Ticket – Cloud Community Club C³ @ SNIST",
       html: `
         <!DOCTYPE html>
         <html>
@@ -371,32 +371,32 @@ router.post("/", async (req, res) => {
         </head>
         <body>
             <div class="container">
-                <h1>🎟️ Welcome to ⁨C³!</h1>
+                <h1>🎓 Welcome to C³!</h1>
                 <p>Hey <span class="highlight">${name}</span>,</p>
-                <p>Thank you for registering for <strong>Cloud Community Club C³ OpenSession</strong> at SNIST! 🚀</p>
+                <p>Thank you for registering for <strong>Cloud Community Club C³ OpenSession</strong> at SNIST!</p>
 
                 <div class="event-details">
                     <p><strong>📍 Venue:</strong> Admin Seminar Hall - 2</p>
                     <p><strong>📅 Date:</strong> 10th March</p>
                     <p><strong>⏰ Time:</strong> 1:30 PM – 3:30 PM</p>
-                    <p><strong>🆔 Registration ID:</strong> <span class="highlight">${registrationID}</span></p>
+                    <p><strong>ID:</strong> <span class="highlight">${registrationID}</span></p>
                 </div>
 
-                <p>📎 Your Ticket is attached to this email.</p>
+                <p>🎫 Your Ticket is attached to this email.</p>
 
-                <h2>🔥 What's in Store?</h2>
-                <p>✔️ <strong>Inspiring Talks</strong> – Gain insights from industry experts.</p>
-                <p>✔️ <strong>Networking</strong> – Connect with like-minded tech enthusiasts.</p>
-                <p>✔️ <strong>Hands-on Workshops</strong> – Explore cutting-edge technologies.</p>
-                <p>✔️ <strong>Opportunities</strong> – Research, Open-Source, Hackathons & More!</p>
+                <h2>What's in Store?</h2>
+                <p><strong>• Inspiring Talks</strong> – Gain insights from industry experts.</p>
+                <p><strong>• Networking</strong> – Connect with like-minded tech enthusiasts.</p>
+                <p><strong>• Hands-on Workshops</strong> – Explore cutting-edge technologies.</p>
+                <p><strong>• Opportunities</strong> – Research, Open-Source, Hackathons & More!</p>
 
-                <a href="https://chat.whatsapp.com/I0Z9iJ4O9veByzx20AofGY" class="cta-button">Join Our WhatsApp Community</a>
+                <a href="https://chat.whatsapp.com/I0Z9iJ4O9veByzx20AofGY" class="cta-button">💬 Join Our WhatsApp Community</a>
 
                 <p class="footer">
-                    Looking forward to an exciting session with you! 🎯 <br>
+                    Looking forward to an exciting session with you!<br>
                     <strong>Best Regards,</strong><br>
-                    <strong>Team C³</strong> <br>
-                    📧 <a href="mailto:pingus@cloudcommunityclub.in" style="color: #007bff;">pingus@cloudcommunityclub.in</a>
+                    <strong>Team C³</strong><br>
+                    ✉️ <a href="mailto:pingus@cloudcommunityclub.in" style="color: #007bff;">pingus@cloudcommunityclub.in</a>
                 </p>
             </div>
         </body>
