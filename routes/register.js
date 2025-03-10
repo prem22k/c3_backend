@@ -16,7 +16,7 @@ router.post("/", async (req, res) => {
     const { 
       name, 
       email, 
-      phone, 
+      mobile, 
       rollNumber, 
       branch, 
       year, 
@@ -27,7 +27,7 @@ router.post("/", async (req, res) => {
     } = req.body;
     
     // Validate required fields
-    if (!name || !email || !phone || !rollNumber || !branch || !year || !interests || interests.length === 0) {
+    if (!name || !email || !mobile || !rollNumber || !branch || !year || !interests || interests.length === 0) {
       return res.status(400).json({ error: "All required fields must be provided" });
     }
 
@@ -44,7 +44,7 @@ router.post("/", async (req, res) => {
     const newRegistration = new NewMembers({
       name,
       email,
-      phone,
+      mobile,
       rollNumber,
       branch,
       year,
