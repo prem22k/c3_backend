@@ -59,7 +59,7 @@ router.post("/", async (req, res) => {
 
     // Return success response
     res.status(201).json({ 
-      message: "Registration successful", 
+      message: "success", 
       //registrationID: registrationID 
     });
   } catch (error) {
