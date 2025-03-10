@@ -1,7 +1,7 @@
 import { Router } from "express";
 import dotenv from "dotenv";
 import Registration from "../models/registration.js";
-
+import NewMembers from "../models/newMembers.js";
 dotenv.config();
 const router = Router();
 
@@ -32,16 +32,16 @@ router.post("/", async (req, res) => {
     }
 
     // Check if the email already exists
-    const existingUser = await Registration.findOne({ email });
+    const existingUser = await NewMembers.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "Email already registered" });
     }
 
     // Generate a unique registration ID
-    const registrationID = generateRegistrationID();
+    //const registrationID = generateRegistrationID();
 
     // Save registration to MongoDB
-    const newRegistration = new Registration({
+    const newRegistration = new NewMembers({
       name,
       email,
       phone,
@@ -52,7 +52,7 @@ router.post("/", async (req, res) => {
       experience,
       expectations,
       referral,
-      registrationID,
+      //registrationID,
     });
     
     await newRegistration.save();
@@ -60,7 +60,7 @@ router.post("/", async (req, res) => {
     // Return success response
     res.status(201).json({ 
       message: "Registration successful", 
-      registrationID: registrationID 
+      //registrationID: registrationID 
     });
   } catch (error) {
     console.error("Error:", error);
