@@ -70,63 +70,42 @@ router.post("/", async (req, res) => {
     //const registrationID = generateRegistrationID();
 
     // Save registration to MongoDB
-    const newRegistration = new NewMembers({
-      name,
-      email,
-      mobile,
-      rollNumber,
-      department,
-      year,
-      interests,
-      experience,
-      expectations,
-      referral,
-      //registrationID,
-    });
-    
-    await newRegistration.save();
-
-    // Check if email configuration is available
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      return res.status(201).json({
-        status: "partial_success",
-        message: "Registration successful, but email notification is not configured",
-        details: "You are registered, but the system is not configured to send emails."
-      });
-    }
-
-    // Create a transporter using environment variables
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT),
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER, // no-reply@cloudcommunityclub.in
-        pass: process.env.EMAIL_PASS, // noreply@snisT1
-      },
-      tls: {
-        rejectUnauthorized: false,
-      }
-    });
-
-    // Verify email configuration before sending
     try {
-      await transporter.verify();
-    } catch (verifyError) {
-      console.error('Email configuration error:', verifyError);
-      return res.status(201).json({
-        status: "partial_success",
-        message: "Registration successful, but email service is not available",
-        details: "You are registered, but we couldn't send the confirmation email. Our team will contact you soon."
+      const newRegistration = new NewMembers({
+        name,
+        email,
+        mobile,
+        rollNumber,
+        department,
+        year,
+        interests,
+        experience,
+        expectations,
+        referral,
       });
-    }
+      
+      await newRegistration.save();
+      
+      // Create a transporter using environment variables
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT),
+        secure: true,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        }
+      });
 
-    // Mail options with proper sender address
-    const mailOptions = {
-      from: `Cloud Community Club (C³) <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "🎉 Welcome to Cloud Community Club (C³) Membership!",
-      html: `
+      // Mail options with proper sender address
+      const mailOptions = {
+        from: `Cloud Community Club (C³) <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "🎉 Welcome to Cloud Community Club (C³) Membership!",
+        html: `
       
  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
       <html xmlns="http://www.w3.org/1999/xhtml">
@@ -396,32 +375,55 @@ router.post("/", async (req, res) => {
 
       
       `
-    };
-  
+      };
 
-  
-    // Send email with enhanced error handling
-    try {
-      await transporter.sendMail(mailOptions);
-      return res.status(201).json({
-        status: "success",
-        message: "Registration successful!",
-        details: "Welcome to Cloud Community Club (C³)! We've sent you a confirmation email."
-      });
-    } catch (emailError) {
-      console.error('Failed to send email:', emailError);
-      return res.status(201).json({
-        status: "partial_success",
-        message: "Registration successful, but email notification failed",
-        details: "You are registered, but we couldn't send the confirmation email. Please check your email address."
+      // Send email
+      try {
+        await transporter.sendMail(mailOptions);
+        res.status(201).json({
+          success: true,
+          message: "Registration successful! Welcome email sent.",
+          data: {
+            name,
+            email,
+            department,
+            year
+          }
+        });
+      } catch (emailError) {
+        console.error('Failed to send email:', emailError);
+        res.status(201).json({
+          success: true,
+          message: "Registration successful! But welcome email could not be sent.",
+          data: {
+            name,
+            email,
+            department,
+            year
+          }
+        });
+      }
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      if (dbError.code === 11000) { // Duplicate key error
+        return res.status(400).json({
+          success: false,
+          message: "Email already registered",
+          error: "This email is already registered with us."
+        });
+      }
+      res.status(500).json({
+        success: false,
+        message: "Registration failed",
+        error: "Unable to complete registration. Please try again."
       });
     }
   } catch (error) {
-    console.error('Registration error:', error);
-    return res.status(500).json({
-      status: "error",
-      message: "Registration failed",
-      details: "An unexpected error occurred. Please try again later."
+    console.error('Server error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: "An unexpected error occurred. Please try again later."
     });
   }
 });
