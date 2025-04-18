@@ -40,9 +40,8 @@ router.post("/", async (req, res) => {
     // Validate required fields
     if (!name || !email || !mobile || !rollNumber || !department || !year || !interests || interests.length === 0) {
       return res.status(400).json({ 
-        status: "error",
-        message: "All required fields must be provided",
-        details: "Please fill in all the required fields"
+        success: false,
+        message: "All required fields must be provided"
       });
     }
 
@@ -60,9 +59,8 @@ router.post("/", async (req, res) => {
     const existingUser = await NewMembers.findOne({ email });
     if (existingUser) {
       return res.status(200).json({ 
-        status: "already_registered",
-        message: "You are already registered!",
-        details: "This email is already registered in our system. Welcome back!"
+        success: false,
+        message: "Email already registered"
       });
     }
 
@@ -72,20 +70,20 @@ router.post("/", async (req, res) => {
     // Save registration to MongoDB
     try {
       const newRegistration = new NewMembers({
-        name,
+      name,
         email,
-        mobile,
+      mobile,
         rollNumber,
-        department,
+      department,
         year,
-        interests,
+      interests,
         experience,
-        expectations,
+      expectations,
         referral,
-      });
+    });
       
-      await newRegistration.save();
-      
+    await newRegistration.save();
+
       // Create a transporter using environment variables
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
@@ -101,11 +99,11 @@ router.post("/", async (req, res) => {
       });
 
       // Mail options with proper sender address
-      const mailOptions = {
+    const mailOptions = {
         from: `Cloud Community Club (C³) <${process.env.EMAIL_USER}>`,
-        to: email,
+      to: email,
         subject: "🎉 Welcome to Cloud Community Club (C³) Membership!",
-        html: `
+      html: `
       
  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
       <html xmlns="http://www.w3.org/1999/xhtml">
@@ -379,28 +377,16 @@ router.post("/", async (req, res) => {
 
       // Send email
       try {
-        await transporter.sendMail(mailOptions);
-        res.status(201).json({
+    await transporter.sendMail(mailOptions);
+        return res.status(201).json({
           success: true,
-          message: "Registration successful! Welcome email sent.",
-          data: {
-            name,
-            email,
-            department,
-            year
-          }
+          message: "Registration successful"
         });
       } catch (emailError) {
-        console.error('Failed to send email:', emailError);
-        res.status(201).json({
+        console.error('Email error:', emailError);
+        return res.status(201).json({
           success: true,
-          message: "Registration successful! But welcome email could not be sent.",
-          data: {
-            name,
-            email,
-            department,
-            year
-          }
+          message: "Registration successful"
         });
       }
     } catch (dbError) {
