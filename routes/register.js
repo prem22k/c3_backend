@@ -29,13 +29,21 @@ router.post("/", async (req, res) => {
     
     // Validate required fields
     if (!name || !email || !mobile || !rollNumber || !department || !year || !interests || interests.length === 0) {
-      return res.status(400).json({ error: "All required fields must be provided" });
+      return res.status(400).json({ 
+        status: "error",
+        message: "All required fields must be provided",
+        details: "Please fill in all the required fields"
+      });
     }
 
     // Check if the email already exists
     const existingUser = await NewMembers.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: "Email already registered" });
+      return res.status(200).json({ 
+        status: "already_registered",
+        message: "You are already registered!",
+        details: "This email is already registered in our system. Welcome back!"
+      });
     }
 
     // Generate a unique registration ID
@@ -358,30 +366,30 @@ router.post("/", async (req, res) => {
   
 
   
-    // Send the email
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log("Error occurred:", error);
-        } else {
-            console.log("Email sent successfully:", info.response);
-        }
-    });
-    
-
-    
-   
-
-    
-    
-  
-    // Return success response
-    res.status(201).json({ 
-      message: "success", 
-      //registrationID: registrationID 
-    });
+    // Send email
+    try {
+      await transporter.sendMail(mailOptions);
+      return res.status(201).json({
+        status: "success",
+        message: "Registration successful!",
+        details: "Welcome to Cloud Community Club (C³)! We've sent you a confirmation email."
+      });
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      // If email fails, still return success for registration but notify about email issue
+      return res.status(201).json({
+        status: "partial_success",
+        message: "Registration successful, but email notification failed",
+        details: "You are registered, but we couldn't send the confirmation email. Please check your email address."
+      });
+    }
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error('Registration error:', error);
+    return res.status(500).json({
+      status: "error",
+      message: "Registration failed",
+      details: "An unexpected error occurred. Please try again later."
+    });
   }
 });
 
