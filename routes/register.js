@@ -3,6 +3,7 @@ import nodemailer from'nodemailer';
 import dotenv from "dotenv";
 import Registration from "../models/registration.js";
 import NewMembers from "../models/newMembers.js";
+import mongoose from "mongoose";
 dotenv.config();
 const router = Router();
 
@@ -14,6 +15,15 @@ const generateRegistrationID = () => {
 // POST route for form submission
 router.post("/", async (req, res) => {
   try {
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({
+        status: "error",
+        message: "Database connection error",
+        details: "Unable to connect to the database. Please try again later."
+      });
+    }
+
     const { 
       name, 
       email, 
@@ -33,6 +43,16 @@ router.post("/", async (req, res) => {
         status: "error",
         message: "All required fields must be provided",
         details: "Please fill in all the required fields"
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid email format",
+        details: "Please provide a valid email address"
       });
     }
 
@@ -65,30 +85,44 @@ router.post("/", async (req, res) => {
     });
     
     await newRegistration.save();
-    
 
-    
+    // Check if email configuration is available
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(201).json({
+        status: "partial_success",
+        message: "Registration successful, but email notification is not configured",
+        details: "You are registered, but the system is not configured to send emails."
+      });
+    }
 
-    // Email credentials
-    const EMAIL_USER = process.env.EMAIL_USER; // Your Hostinger email
-    const EMAIL_PASS = process.env.EMAIL_PASS; // Replace with app password or email password
-    
-    // Create a transporter using Hostinger's SMTP settings
+    // Create a transporter using environment variables
     const transporter = nodemailer.createTransport({
-      host: "smtp.hostinger.com",
-      port: 465,
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT),
       secure: true,
       auth: {
-          user: EMAIL_USER,
-          pass: EMAIL_PASS,
+        user: process.env.EMAIL_USER, // no-reply@cloudcommunityclub.in
+        pass: process.env.EMAIL_PASS, // noreply@snisT1
       },
       tls: {
-          rejectUnauthorized: false,
+        rejectUnauthorized: false,
       }
-  });
-  
-  // Mail options
-  const mailOptions = {
+    });
+
+    // Verify email configuration before sending
+    try {
+      await transporter.verify();
+    } catch (verifyError) {
+      console.error('Email configuration error:', verifyError);
+      return res.status(201).json({
+        status: "partial_success",
+        message: "Registration successful, but email service is not available",
+        details: "You are registered, but we couldn't send the confirmation email. Our team will contact you soon."
+      });
+    }
+
+    // Mail options with proper sender address
+    const mailOptions = {
       from: `Cloud Community Club (C³) <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "🎉 Welcome to Cloud Community Club (C³) Membership!",
@@ -216,7 +250,7 @@ router.post("/", async (req, res) => {
                             <li style="margin: 0 0 10px;">You'll receive regular updates about upcoming events, workshops, and opportunities</li>
                             <li style="margin: 0 0 10px;">All important club announcements will be shared via this email address</li>
                             <li style="margin: 0 0 10px;">Be on the lookout for our next event - details coming soon!</li>
-                          </ul>
+        </ul>
                         </td>
                       </tr>
                       
@@ -362,11 +396,11 @@ router.post("/", async (req, res) => {
 
       
       `
-  };
+    };
   
 
   
-    // Send email
+    // Send email with enhanced error handling
     try {
       await transporter.sendMail(mailOptions);
       return res.status(201).json({
@@ -375,8 +409,7 @@ router.post("/", async (req, res) => {
         details: "Welcome to Cloud Community Club (C³)! We've sent you a confirmation email."
       });
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
-      // If email fails, still return success for registration but notify about email issue
+      console.error('Failed to send email:', emailError);
       return res.status(201).json({
         status: "partial_success",
         message: "Registration successful, but email notification failed",
