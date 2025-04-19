@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:3000', 'https://snist.cloudcommunityclub.in'],
+  origin: ['http://localhost:3000', 'https://snist.cloudcommunityclub.in','https://cloudcommunityclub-c3.vercel.app/'],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
