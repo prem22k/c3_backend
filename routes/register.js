@@ -5,6 +5,17 @@ import NewMembers from "../models/newMembers.js";
 dotenv.config();
 const router = Router();
 
+// GET route for registration endpoint
+router.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Registration API is working",
+    instructions: "Please use POST method to register a new member",
+    endpoints: {
+      register: "POST /api/register - Register a new member"
+    }
+  });
+});
+
 // POST route for form submission
 router.post("/", async (req, res) => {
   try {

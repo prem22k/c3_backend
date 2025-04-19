@@ -24,13 +24,26 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add request logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`, req.body);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', req.body);
+  }
   next();
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+// Test POST endpoint
+app.post('/test', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    message: 'POST request received successfully',
+    body: req.body
+  });
 });
 
 // Connect to MongoDB
