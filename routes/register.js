@@ -1,9 +1,45 @@
 import { Router } from "express";
 import nodemailer from 'nodemailer';
+import { google } from 'googleapis';
 import dotenv from "dotenv";
 import NewMembers from "../models/newMembers.js";
 dotenv.config();
 const router = Router();
+const OAuth2 = google.auth.OAuth2;
+
+// Create the OAuth2 Client
+const createTransporter = async () => {
+  try {
+    const oauth2Client = new OAuth2(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      "https://developers.google.com/oauthplayground"
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: process.env.REFRESH_TOKEN
+    });
+
+    const accessToken = await oauth2Client.getAccessToken();
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: process.env.EMAIL_USER,
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET,
+        refreshToken: process.env.REFRESH_TOKEN,
+        accessToken: accessToken.token,
+      },
+    });
+
+    return transporter;
+  } catch (error) {
+    console.log("Error creating transporter:", error);
+    return null;
+  }
+};
 
 // GET route for registration endpoint
 router.get("/", (req, res) => {
@@ -11,45 +47,9 @@ router.get("/", (req, res) => {
     message: "Registration API is working",
     instructions: "Please use POST method to register a new member",
     endpoints: {
-      register: "POST /api/register - Register a new member",
-      testEmail: "GET /api/register/test-email - Test SMTP connection"
+      register: "POST /api/register - Register a new member"
     }
   });
-});
-
-// Test email endpoint for debugging SMTP issues
-router.get("/test-email", async (req, res) => {
-  try {
-    // Use standard Gmail service preset
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      pool: false,
-    });
-
-    await transporter.verify();
-
-    res.status(200).json({
-      message: "SMTP Test Results",
-      environment: {
-        service: "gmail",
-        EMAIL_USER: process.env.EMAIL_USER ? "***configured***" : "not configured"
-      },
-      results: [{
-        config: "service: gmail",
-        status: "success",
-        message: "Connection verified successfully"
-      }]
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "SMTP test failed",
-      error: error.message
-    });
-  }
 });
 
 // POST route for form submission
@@ -97,22 +97,10 @@ router.post("/", async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Send welcome email
-    try {
-      // Use standard Gmail service preset which handles ports/secure settings automatically
-      // combined with the global IPv4 fix in server.js
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-        pool: false, // Use a fresh connection to avoid stale socket timeouts
-      });
+    // Send welcome email using OAuth2
+    const transporter = await createTransporter();
 
-      // Verify connection before sending
-      await transporter.verify();
-
+    if (transporter) {
       const mailOptions = {
         from: `Cloud Community Club (C³) <${process.env.EMAIL_USER}>`,
         to: email,
@@ -158,10 +146,15 @@ router.post("/", async (req, res) => {
         `
       };
 
-      await transporter.sendMail(mailOptions);
-    } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      // Don't fail the registration if email fails
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log("Email sent successfully via OAuth2");
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        // Don't fail the registration if email fails
+      }
+    } else {
+      console.error('Failed to create OAuth2 transporter');
     }
 
     // Send success response
