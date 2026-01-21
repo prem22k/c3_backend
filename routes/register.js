@@ -124,17 +124,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Check if the email already exists
-    const existingUser = await NewMembers.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        message: "existing",
-        error: "Email already registered"
-      });
-    }
-
-    // Save registration to MongoDB
-    const newRegistration = new NewMembers({
+    // Upsert: Update existing member or create new one
+    // This allows users to retry if email sending failed previously
+    const memberData = {
       name,
       email,
       mobile,
@@ -145,9 +137,13 @@ router.post("/", async (req, res) => {
       experience,
       expectations,
       referral,
-    });
+    };
 
-    await newRegistration.save();
+    await NewMembers.findOneAndUpdate(
+      { email },
+      memberData,
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     // Send welcome email
     try {
