@@ -20,77 +20,29 @@ router.get("/", (req, res) => {
 // Test email endpoint for debugging SMTP issues
 router.get("/test-email", async (req, res) => {
   try {
-    const smtpConfigs = [
-      {
-        host: process.env.SMTP_HOST || "smtp.gmail.com",
-        port: process.env.SMTP_PORT || 587,
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false,
-          ciphers: 'SSLv3'
-        },
-        connectionTimeout: 60000,
-        greetingTimeout: 30000,
-        socketTimeout: 60000,
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-        rateDelta: 20000,
-        rateDelta: 20000,
-        rateLimit: 5,
-        family: 4 // Force IPv4 to avoid Render/Gmail timeouts
+    // Use standard Gmail service preset
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
-      {
-        host: process.env.SMTP_HOST || "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-        connectionTimeout: 60000,
-        greetingTimeout: 30000,
-        socketTimeout: 60000,
-        family: 4 // Force IPv4 to avoid Render/Gmail timeouts
-      }
-    ];
+      pool: false,
+    });
 
-    const results = [];
-
-    for (const config of smtpConfigs) {
-      try {
-        const transporter = nodemailer.createTransport(config);
-        await transporter.verify();
-        results.push({
-          config: `${config.host}:${config.port} (${config.secure ? 'SSL' : 'TLS'})`,
-          status: 'success',
-          message: 'Connection verified successfully'
-        });
-      } catch (error) {
-        results.push({
-          config: `${config.host}:${config.port} (${config.secure ? 'SSL' : 'TLS'})`,
-          status: 'failed',
-          error: error.message,
-          code: error.code
-        });
-      }
-    }
+    await transporter.verify();
 
     res.status(200).json({
       message: "SMTP Test Results",
       environment: {
-        SMTP_HOST: process.env.SMTP_HOST || "smtp.gmail.com",
-        SMTP_PORT: process.env.SMTP_PORT || "587",
+        service: "gmail",
         EMAIL_USER: process.env.EMAIL_USER ? "***configured***" : "not configured"
       },
-      results
+      results: [{
+        config: "service: gmail",
+        status: "success",
+        message: "Connection verified successfully"
+      }]
     });
   } catch (error) {
     res.status(500).json({
@@ -147,70 +99,19 @@ router.post("/", async (req, res) => {
 
     // Send welcome email
     try {
-      // Try multiple SMTP configurations for better reliability
-      const smtpConfigs = [
-        {
-          host: process.env.SMTP_HOST || "smtp.gmail.com",
-          port: process.env.SMTP_PORT || 587,
-          secure: false,
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-          },
-          tls: {
-            rejectUnauthorized: false,
-            ciphers: 'SSLv3'
-          },
-          connectionTimeout: 60000,
-          greetingTimeout: 30000,
-          socketTimeout: 60000,
-          pool: true,
-          maxConnections: 5,
-          maxMessages: 100,
-          rateDelta: 20000,
-          rateDelta: 20000,
-          rateLimit: 5,
-          family: 4 // Force IPv4 to avoid Render/Gmail timeouts
+      // Use standard Gmail service preset which handles ports/secure settings automatically
+      // combined with the global IPv4 fix in server.js
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
         },
-        {
-          host: process.env.SMTP_HOST || "smtp.gmail.com",
-          port: 465,
-          secure: true,
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-          },
-          tls: {
-            rejectUnauthorized: false,
-          },
-          connectionTimeout: 60000,
-          greetingTimeout: 30000,
-          socketTimeout: 60000,
-          family: 4 // Force IPv4 to avoid Render/Gmail timeouts
-        }
-      ];
+        pool: false, // Use a fresh connection to avoid stale socket timeouts
+      });
 
-      let transporter = null;
-      let lastError = null;
-
-      // Try each configuration until one works
-      for (const config of smtpConfigs) {
-        try {
-          transporter = nodemailer.createTransport(config);
-          // Test the connection
-          await transporter.verify();
-          console.log('SMTP connection verified successfully');
-          break;
-        } catch (error) {
-          console.log(`SMTP config failed: ${config.host}:${config.port}, trying next...`);
-          lastError = error;
-          continue;
-        }
-      }
-
-      if (!transporter) {
-        throw lastError || new Error('All SMTP configurations failed');
-      }
+      // Verify connection before sending
+      await transporter.verify();
 
       const mailOptions = {
         from: `Cloud Community Club (C³) <${process.env.EMAIL_USER}>`,

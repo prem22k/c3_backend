@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import registerRoutes from './routes/register.js';
+import dns from 'node:dns';
+
+// Force IPv4 resolution to avoid timeouts in some container environments (like Render)
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
@@ -39,7 +43,7 @@ app.get('/health', (req, res) => {
 
 // Test POST endpoint
 app.post('/test', (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     status: 'ok',
     message: 'POST request received successfully',
     body: req.body
