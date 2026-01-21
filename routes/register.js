@@ -52,6 +52,43 @@ router.get("/", (req, res) => {
   });
 });
 
+// Legacy SMTP Test Endpoint (Commented out for OAuth2 migration)
+/*
+router.get("/test-email", async (req, res) => {
+  try {
+    // Use standard Gmail service preset
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      pool: false,
+    });
+
+    await transporter.verify();
+    
+    res.status(200).json({
+      message: "SMTP Test Results",
+      environment: {
+        service: "gmail",
+        EMAIL_USER: process.env.EMAIL_USER ? "***configured***" : "not configured"
+      },
+      results: [{
+        config: "service: gmail",
+        status: "success",
+        message: "Connection verified successfully"
+      }]
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "SMTP test failed",
+      error: error.message
+    });
+  }
+});
+*/
+
 // POST route for form submission
 router.post("/", async (req, res) => {
   try {
@@ -145,6 +182,25 @@ router.post("/", async (req, res) => {
           </html>
         `
       };
+
+      /* Legacy SMTP Sending Logic (Commented out)
+      try {
+        // Use standard Gmail service preset which handles ports/secure settings automatically
+        // combined with the global IPv4 fix in server.js
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+          pool: false, // Use a fresh connection to avoid stale socket timeouts
+        });
+
+        // Verify connection before sending
+        await transporter.verify();
+        await transporter.sendMail(mailOptions);
+      } catch (error) { ... }
+      */
 
       try {
         await transporter.sendMail(mailOptions);
