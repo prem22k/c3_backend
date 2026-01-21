@@ -40,7 +40,9 @@ router.get("/test-email", async (req, res) => {
         maxConnections: 5,
         maxMessages: 100,
         rateDelta: 20000,
-        rateLimit: 5
+        rateDelta: 20000,
+        rateLimit: 5,
+        family: 4 // Force IPv4 to avoid Render/Gmail timeouts
       },
       {
         host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -55,12 +57,13 @@ router.get("/test-email", async (req, res) => {
         },
         connectionTimeout: 60000,
         greetingTimeout: 30000,
-        socketTimeout: 60000
+        socketTimeout: 60000,
+        family: 4 // Force IPv4 to avoid Render/Gmail timeouts
       }
     ];
 
     const results = [];
-    
+
     for (const config of smtpConfigs) {
       try {
         const transporter = nodemailer.createTransport(config);
@@ -100,33 +103,33 @@ router.get("/test-email", async (req, res) => {
 // POST route for form submission
 router.post("/", async (req, res) => {
   try {
-    const { 
-      name, 
-      email, 
-      mobile, 
-      rollNumber, 
-      department, 
-      year, 
-      interests, 
-      experience, 
-      expectations, 
-      referral 
+    const {
+      name,
+      email,
+      mobile,
+      rollNumber,
+      department,
+      year,
+      interests,
+      experience,
+      expectations,
+      referral
     } = req.body;
-    
+
     // Validate required fields
     if (!name || !email || !mobile || !rollNumber || !department || !year || !interests || interests.length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "error",
-        error: "All required fields must be provided" 
+        error: "All required fields must be provided"
       });
     }
 
     // Check if the email already exists
     const existingUser = await NewMembers.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "existing",
-        error: "Email already registered" 
+        error: "Email already registered"
       });
     }
 
@@ -143,7 +146,7 @@ router.post("/", async (req, res) => {
       expectations,
       referral,
     });
-    
+
     await newRegistration.save();
 
     // Send welcome email
@@ -169,7 +172,9 @@ router.post("/", async (req, res) => {
           maxConnections: 5,
           maxMessages: 100,
           rateDelta: 20000,
-          rateLimit: 5
+          rateDelta: 20000,
+          rateLimit: 5,
+          family: 4 // Force IPv4 to avoid Render/Gmail timeouts
         },
         {
           host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -184,7 +189,8 @@ router.post("/", async (req, res) => {
           },
           connectionTimeout: 60000,
           greetingTimeout: 30000,
-          socketTimeout: 60000
+          socketTimeout: 60000,
+          family: 4 // Force IPv4 to avoid Render/Gmail timeouts
         }
       ];
 
