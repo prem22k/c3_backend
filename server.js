@@ -50,20 +50,6 @@ app.post('/test', (req, res) => {
   });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    // Only start server after successful DB connection
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  });
-
 // Routes
 app.use('/api/register', registerRoutes);
 
@@ -75,3 +61,21 @@ app.use((err, req, res, next) => {
     error: 'Something went wrong!'
   });
 });
+
+// Connect to MongoDB
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+      console.log('Connected to MongoDB');
+      // Only start server after successful DB connection
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    })
+    .catch(err => {
+      console.error('MongoDB connection error:', err);
+      process.exit(1);
+    });
+}
+
+export default app;
