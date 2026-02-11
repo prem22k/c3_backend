@@ -2,7 +2,8 @@ import { Router } from "express";
 import nodemailer from 'nodemailer';
 import { google } from 'googleapis';
 import dotenv from "dotenv";
-import NewMembers from "../models/newMembers.js";
+import Registration2026 from "../models/registration2026.js";
+import { requireApiKey } from "../middleware/auth.js";
 dotenv.config();
 const router = Router();
 const OAuth2 = google.auth.OAuth2;
@@ -36,8 +37,8 @@ router.get("/", (req, res) => {
   });
 });
 
-// POST route for form submission
-router.post("/", async (req, res) => {
+// POST route for form submission (protected with API key)
+router.post("/", requireApiKey, async (req, res) => {
   try {
     const {
       name,
@@ -75,7 +76,7 @@ router.post("/", async (req, res) => {
       referral,
     };
 
-    await NewMembers.findOneAndUpdate(
+    await Registration2026.findOneAndUpdate(
       { email },
       memberData,
       { upsert: true, new: true, setDefaultsOnInsert: true }
